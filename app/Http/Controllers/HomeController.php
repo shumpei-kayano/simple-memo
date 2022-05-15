@@ -76,4 +76,19 @@ class HomeController extends Controller
         return redirect( route('home') );
     }
 
+    public function destroy(Request $request)
+    {
+        //postで投げられた値を全て受け取る
+        $posts = $request->all();
+        //dump dieの略 ⇨ メソッドの引数の取った値を展開する ⇨ データの確認用
+        // dd($posts);
+        // dd(Auth::id());
+
+        //SQLのdelete文を記述すると物理削除になる
+        Memo::where('id', $posts['memo_id'])->update(['deleted_at' => date("Y-m-d H:i:s", time())]);
+        
+        
+        return redirect( route('home') );
+    }
+
 }
