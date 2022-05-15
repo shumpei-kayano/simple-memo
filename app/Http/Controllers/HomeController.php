@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Memo;
+use App\Models\Tag;
+use App\Models\MemoTag;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class HomeController extends Controller
 {
@@ -41,9 +44,25 @@ class HomeController extends Controller
         $posts = $request->all();
         //dump dieの略 ⇨ メソッドの引数の取った値を展開する ⇨ データの確認用
         // dd($posts);
-        // dd(Auth::id());
 
-        Memo::insert(['content' => $posts['content'], 'user_id' => Auth::id()]);
+        //トランザクションの開始
+        DB::transaction(function () use($posts){
+            //memosテーブルへインサート
+            $memo_id = Memo::insertGetId(['content' => $posts['content'], 'user_id' => Auth::id()]);
+            //新規タグが既にtagsテーブルに存在するかのチェック
+            $tag_exists = Tag::where('user_id', '=', Auth::id())
+            ->where('name', '=', $posts['new_tag'])
+            ->exists();
+            //新規タグが入力されているかチェック
+            if( !empty($posts['new_tag']) && !$tag_exists){
+                //新規タグが既に存在していなければtagsテーブルにインサートしてtag_idの取得
+                $tag_id = Tag::insertGetId(['user_id' => Auth::id(), 'name' => $posts['new_tag']]);
+                //memo_tagsテーブルにインサート
+                MemoTag::insert(['memo_id' => $memo_id, 'tag_id' => $tag_id]);
+            }
+        });
+        //トランザクション終了
+
         
         return redirect( route('home') );
     }
